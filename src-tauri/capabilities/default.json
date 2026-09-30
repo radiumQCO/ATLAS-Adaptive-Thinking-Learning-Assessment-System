@@ -1,0 +1,1 @@
+{"$schema":"../gen/schemas/desktop-schema.json","identifier":"main-capability","description":"Local notebook window and user-chosen JSON backups","windows":["main"],"permissions":["core:default","core:window:allow-close","core:window:allow-destroy","dialog:allow-save","dialog:allow-open","fs:allow-write-text-file","fs:allow-read-text-file"]}
