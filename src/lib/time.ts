@@ -53,6 +53,16 @@ export function splitByDay(segments: StudySession['segments']): Map<string, numb
   }
   return days;
 }
+export function durationOnDay(segments: StudySession['segments'], day: string) {
+  const start = parseDay(day).getTime();
+  const next = shiftDay(day, 1);
+  const end = parseDay(next).getTime();
+  return segments.reduce(
+    (total, segment) =>
+      total + Math.max(0, Math.min(segment.end, end) - Math.max(segment.start, start)),
+    0,
+  );
+}
 export function getStats(sessions: StudySession[], now = Date.now()) {
   const today = dayKey(now),
     daily = new Map<string, number>(),

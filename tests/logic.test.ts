@@ -9,7 +9,7 @@ import {
   linkedTopics,
   territoryProfile,
 } from '../src/lib/civilization';
-import { dayKey, getStats, remaining, splitByDay } from '../src/lib/time';
+import { dayKey, durationOnDay, getStats, remaining, splitByDay } from '../src/lib/time';
 
 describe('knowledge model', () => {
   it('opens a genuinely empty notebook and upgrades legacy snapshots', () => {
@@ -166,6 +166,8 @@ describe('study time', () => {
     const parts = splitByDay([{ start, end }]);
     expect(parts.get(dayKey(start))).toBe(15 * 60_000);
     expect(parts.get(dayKey(end))).toBe(15 * 60_000);
+    expect(durationOnDay([{ start, end }], dayKey(start))).toBe(15 * 60_000);
+    expect(durationOnDay([{ start, end }], dayKey(end))).toBe(15 * 60_000);
   });
 
   it('does not count future imported sessions in current totals', () => {

@@ -215,6 +215,69 @@ test('checklist deletes a topic in one click and automatic backups can be disabl
   await expect(page.getByLabel('Automatic backups')).not.toBeChecked();
 });
 
+test('checklist keeps three levels together and finds a nested topic with its parents', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await addFirstTopic(page, 'Parent idea');
+  await page.getByRole('button', { name: 'connections', exact: true }).click();
+  await page.getByRole('button', { name: 'Add child' }).click();
+  await page.getByPlaceholder('What would you like to understand?').fill('Child idea');
+  await page.getByRole('button', { name: 'Add topic', exact: true }).click();
+  await page.getByRole('button', { name: 'connections', exact: true }).click();
+  await page.getByRole('button', { name: 'Add child' }).click();
+  await page.getByPlaceholder('What would you like to understand?').fill('Grandchild idea');
+  await page.getByRole('button', { name: 'Add topic', exact: true }).click();
+  await page.getByLabel('Close dialog').click();
+  await page.getByRole('button', { name: 'Checklist', exact: true }).click();
+  const rows = page.locator('.topic-tree-entry');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText('Parent idea');
+  await expect(rows.nth(1)).toContainText('Child idea');
+  await expect(rows.nth(1)).toContainText('SUBTOPIC');
+  await expect(rows.nth(2)).toContainText('Grandchild idea');
+  await expect(rows.nth(2)).toContainText('SUB-SUBTOPIC');
+  await page.getByRole('button', { name: 'Collapse Parent idea subtopics' }).click();
+  await expect(rows).toHaveCount(1);
+  await page.getByLabel('Search topics').fill('Grandchild idea');
+  await expect(rows).toHaveCount(3);
+  await expect(page.locator('.list-caption')).toContainText('PARENTS SHOWN FOR CONTEXT');
+});
+
+test('knowledge map draws a parent arrow when two placed topics are connected', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await addFirstTopic(page, 'Arrow parent');
+  await page.getByLabel('Close dialog').click();
+  await page.getByRole('button', { name: 'New topic', exact: true }).first().click();
+  await page.getByPlaceholder('What would you like to understand?').fill('Arrow child');
+  await page.getByRole('button', { name: 'Add topic', exact: true }).click();
+  await page.getByLabel('Close dialog').click();
+  await page.getByRole('button', { name: 'Knowledge map' }).click();
+  for (const name of ['Arrow parent', 'Arrow child']) {
+    await page.getByRole('button', { name: 'Place a topic' }).first().click();
+    await page.locator('.topic-picker button').filter({ hasText: name }).click();
+    if (name === 'Arrow parent') {
+      await page.getByLabel('New country name').fill('Arrow territory');
+      await page.getByRole('button', { name: 'Create territory' }).click();
+    } else if ((await page.locator('dialog[open]').count()) > 0) {
+      await page.locator('.country-option').filter({ hasText: 'Arrow territory' }).click();
+    }
+  }
+  await page.getByLabel('Deselect map topic').click();
+  const canvas = page.getByTestId('knowledge-canvas');
+  const before = await canvas.screenshot();
+  await page.getByRole('button', { name: 'Checklist', exact: true }).click();
+  await page.getByRole('button', { name: 'Arrow child', exact: true }).click();
+  await page.getByRole('button', { name: 'connections', exact: true }).click();
+  await page.getByLabel('Parent topic').selectOption({ label: 'Arrow parent · My subject' });
+  await page.getByLabel('Close dialog').click();
+  await page.getByRole('button', { name: 'Knowledge map' }).click();
+  await expect(page.getByText(/Fine arrows point from a topic to its subtopic/)).toBeVisible();
+  expect((await canvas.screenshot()).equals(before)).toBe(false);
+});
+
 test('full reset waits ten seconds and clears local data and backups', async ({ page }) => {
   await page.goto('/');
   await addFirstTopic(page, 'Erase Me');

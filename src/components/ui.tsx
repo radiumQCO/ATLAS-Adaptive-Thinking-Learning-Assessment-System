@@ -169,7 +169,15 @@ export function SubjectLabel({ id }: { id: string }) {
     </span>
   );
 }
-export function TopicRow({ topic, extra }: { topic: Topic; extra?: ReactNode }) {
+export function TopicRow({
+  topic,
+  extra,
+  depth = 0,
+}: {
+  topic: Topic;
+  extra?: ReactNode;
+  depth?: number;
+}) {
   return (
     <div className="topic-row">
       <MasterySquare
@@ -178,7 +186,12 @@ export function TopicRow({ topic, extra }: { topic: Topic; extra?: ReactNode }) 
         onClick={() => setMastery(topic.id, ((topic.mastery + 1) % 4) as Mastery)}
       />
       <button className="topic-name" onClick={() => selectTopic(topic.id)}>
-        {topic.name}
+        <span>{topic.name}</span>
+        {depth > 0 && (
+          <small>
+            {depth === 1 ? 'SUBTOPIC' : depth === 2 ? 'SUB-SUBTOPIC' : 'LEVEL ' + (depth + 1)}
+          </small>
+        )}
       </button>
       <SubjectLabel id={topic.subjectId} />
       {extra}

@@ -22,6 +22,16 @@ try {
     await page.getByRole('button', { name: 'Understood', exact: true }).click();
     await page.getByLabel('Close dialog').click();
   }
+  for (const [child, parent] of [
+    ['Voltage', 'Electricity'],
+    ['Current', 'Voltage'],
+  ]) {
+    await page.getByRole('button', { name: 'Checklist', exact: true }).click();
+    await page.getByRole('button', { name: child, exact: true }).click();
+    await page.getByRole('button', { name: 'connections', exact: true }).click();
+    await page.getByLabel('Parent topic').selectOption({ label: parent + ' · Physics' });
+    await page.getByLabel('Close dialog').click();
+  }
   await page.waitForTimeout(3600);
   await page.getByRole('button', { name: 'Checklist', exact: true }).click();
   await page.waitForTimeout(800);
@@ -40,6 +50,11 @@ try {
       await page.locator('.country-option').filter({ hasText: 'Energy' }).click();
     }
   }
+  await page.getByLabel('Deselect map topic').click();
+  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.waitForTimeout(3700);
+  await page.screenshot({ path: 'docs/previews/map.png' });
   await page.getByRole('button', { name: 'Civilization', exact: true }).click();
   await page.getByRole('button', { name: 'Begin the atlas' }).click();
   await page.evaluate(() => window.scrollTo(0, 0));

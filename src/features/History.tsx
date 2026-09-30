@@ -1,20 +1,32 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { useAtlas, selectTopic } from '../app/store';
-import { dayKey, dateLabel, duration, getStats, parseDay, shiftDay, splitByDay } from '../lib/time';
+import {
+  dayKey,
+  dateLabel,
+  duration,
+  durationOnDay,
+  getStats,
+  parseDay,
+  shiftDay,
+} from '../lib/time';
 import { Button, Empty, IconButton, PageHeader, SectionTitle } from '../components/ui';
 export function History() {
   const { data } = useAtlas(),
-    d = data!,
-    stats = getStats(d.sessions);
+    d = data!;
+  const stats = useMemo(() => getStats(d.sessions), [d.sessions]);
   const [tab, setTab] = useState('calendar'),
     [selected, setSelected] = useState(dayKey()),
     [month, setMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
     [year, setYear] = useState(new Date().getFullYear());
-  const entries = d.sessions
-    .map((s) => ({ ...s, dayDuration: splitByDay(s.segments).get(selected) ?? 0 }))
-    .filter((s) => s.dayDuration > 0)
-    .sort((a, b) => a.startedAt - b.startedAt);
+  const entries = useMemo(
+    () =>
+      d.sessions
+        .map((s) => ({ ...s, dayDuration: durationOnDay(s.segments, selected) }))
+        .filter((s) => s.dayDuration > 0)
+        .sort((a, b) => a.startedAt - b.startedAt),
+    [d.sessions, selected],
+  );
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate(),
     padding = (month.getDay() + 6) % 7;
   const selectDate = (k: string) => {

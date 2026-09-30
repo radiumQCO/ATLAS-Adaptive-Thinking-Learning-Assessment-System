@@ -64,29 +64,46 @@ let persistedRevision = 0,
   init: Promise<void> | null = null,
   toastTimer: ReturnType<typeof setTimeout>,
   failure: unknown = null;
+let pendingData: Snapshot | null = null;
+let saving = false;
 let lastAutoBackupAt = 0;
 let lastAutoBackupRevision = 0;
 let autoBackupRunning = false;
 const AUTO_BACKUP_INTERVAL = 6 * 60 * 60 * 1000;
-function persist(data: Snapshot) {
-  emit({ saveState: 'saving' });
+function startSave() {
+  if (saving || failure || !pendingData) return;
+  saving = true;
   queue = queue
     .then(async () => {
-      if (failure) throw failure;
-      persistedRevision = await storage.saveData(data, persistedRevision);
+      // Keep the newest notebook while someone is typing. A slow disk does not need
+      // to write every single keystroke before the window can close.
+      while (pendingData) {
+        const next = pendingData;
+        pendingData = null;
+        persistedRevision = await storage.saveData(next, persistedRevision);
+      }
     })
     .catch((e) => {
       failure = e;
       emit({ error: String(e instanceof Error ? e.message : e), saveState: 'error' });
+    })
+    .finally(() => {
+      saving = false;
+      if (pendingData && !failure) startSave();
+      else if (!failure) emit({ saveState: 'saved' });
     });
-  const current = queue;
-  void current.then(() => {
-    if (current === queue && !failure) emit({ saveState: 'saved' });
-  });
+}
+function persist(data: Snapshot) {
+  pendingData = data;
+  emit({ saveState: 'saving' });
+  startSave();
 }
 export async function flush() {
-  await queue;
-  if (failure) throw failure;
+  do {
+    startSave();
+    await queue;
+    if (failure) throw failure;
+  } while (pendingData || saving);
 }
 export function mutate(fn: (draft: Snapshot) => void) {
   if (!state.data) return;

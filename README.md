@@ -11,7 +11,7 @@ I made ATLAS because my study notes kept becoming a pile of disconnected lists. 
 
 It's a Windows desktop app, and it works offline. Your notebook stays on your computer. There's no account, cloud sync, or website to set up.
 
-![ATLAS Knowledge Map with example Mathematics, Quantum Computing, and Programming territories](docs/previews/map.png)
+![ATLAS Knowledge Map with Electricity, Voltage, and Current connected by parent arrows](docs/previews/map.png)
 
 ## What you can do
 
@@ -64,7 +64,7 @@ To make your own installer:
 npm run desktop:build
 ```
 
-The installer is created under **src-tauri/target/release/bundle/nsis/**. The app saves its SQLite database in its local app data directory. **Settings → Data & backups → Export JSON** creates a portable copy; **Import JSON** can bring that copy into another installation.
+The installer is created under **src-tauri/target/release/bundle/nsis/**. The build also copies **ATLAS.exe** into the project folder so I can find it quickly. The app saves its SQLite database in its local app data directory. **Settings → Data & backups → Export JSON** creates a portable copy; **Import JSON** can bring that copy into another installation.
 
 ## How it's put together
 

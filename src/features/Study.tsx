@@ -1,21 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Check, Clock, Pause, Play } from 'lucide-react';
 import { finishTimer, mutate, navigate, startTimer, toggleTimer, useAtlas } from '../app/store';
 import { dateLabel, duration, elapsed, getStats, remaining } from '../lib/time';
 import { Button, Empty, PageHeader, SectionTitle, Select } from '../components/ui';
-export function useNow() {
+export function useNow(active: boolean) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
+    if (!active) return;
+    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(id);
-  }, []);
+  }, [active]);
   return now;
 }
 export function Study() {
   const { data, studyTopic } = useAtlas(),
     d = data!,
     timer = d.timer,
-    now = useNow();
+    now = useNow(!!timer && timer.runningSince !== null);
   const [topic, setTopic] = useState(studyTopic ?? d.topics[0]?.id ?? ''),
     [subtopic, setSubtopic] = useState(''),
     [minutes, setMinutes] = useState('25');
@@ -32,7 +34,7 @@ export function Study() {
   const children = d.topics.filter((t) => t.parentId === activeTopic);
   const focusMinutes = Number(minutes);
   const validMinutes = Number.isInteger(focusMinutes) && focusMinutes >= 1 && focusMinutes <= 240;
-  const stats = getStats(d.sessions);
+  const stats = useMemo(() => getStats(d.sessions), [d.sessions]);
   const chosen = timer?.topicId ?? activeTopic,
     child = timer?.subtopicId ?? subtopic;
   const current = d.topics.find((t) => t.id === chosen),
@@ -60,7 +62,10 @@ export function Study() {
   const timeLeft = timer ? remaining(timer, now) : validMinutes ? focusMinutes * 60_000 : 0;
   const dialProgress = timer ? Math.min(100, (ms / timer.targetMs) * 100) : 0;
   const markerAngle = -Math.PI / 2 + (dialProgress / 100) * 2 * Math.PI;
-  const recent = [...d.sessions].sort((a, b) => b.startedAt - a.startedAt).slice(0, 5);
+  const recent = useMemo(
+    () => [...d.sessions].sort((a, b) => b.startedAt - a.startedAt).slice(0, 5),
+    [d.sessions],
+  );
   return (
     <div className="page study-page">
       <PageHeader
@@ -175,7 +180,7 @@ export function Study() {
             </svg>
             <div className="timer-inner">
               <span className="timer-value" aria-label="Time remaining" role="timer">
-                {duration(timeLeft, true)}
+                {duration(Math.ceil(timeLeft / 1000) * 1000, true)}
               </span>
               <span className="timer-caption">
                 {timer

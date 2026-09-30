@@ -76,45 +76,49 @@ export function playSound(cue: SoundCue, enabled = true, volume = 0.35) {
     audio ??= new AudioContext();
     const context = audio;
     const schedule = () => {
-    const start = context.currentTime + 0.008;
-    for (const [frequency, delay, length, strength] of scores[cue]) {
-      const oscillator = context.createOscillator();
-      const envelope = context.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(frequency, start + delay);
-      envelope.gain.setValueAtTime(0.0001, start + delay);
-      envelope.gain.exponentialRampToValueAtTime(
-        Math.max(0.0002, Math.min(1, volume) * 0.22 * strength),
-        start + delay + 0.012,
-      );
-      envelope.gain.exponentialRampToValueAtTime(0.0001, start + delay + length);
-      oscillator.connect(envelope).connect(context.destination);
-      oscillator.start(start + delay);
-      oscillator.stop(start + delay + length + 0.02);
-      const shimmer = context.createOscillator();
-      const shimmerGain = context.createGain();
-      shimmer.type = 'triangle';
-      shimmer.frequency.setValueAtTime(frequency * 2.01, start + delay);
-      shimmerGain.gain.setValueAtTime(0.0001, start + delay);
-      shimmerGain.gain.exponentialRampToValueAtTime(
-        Math.max(0.0002, Math.min(1, volume) * 0.032 * strength),
-        start + delay + 0.014,
-      );
-      shimmerGain.gain.exponentialRampToValueAtTime(0.0001, start + delay + length * 0.72);
-      shimmer.connect(shimmerGain).connect(context.destination);
-      shimmer.start(start + delay);
-      shimmer.stop(start + delay + length * 0.72 + 0.02);
-      oscillator.onended = () => {
-        oscillator.disconnect();
-        envelope.disconnect();
-      };
-      shimmer.onended = () => {
-        shimmer.disconnect();
-        shimmerGain.disconnect();
-      };
-    }
+      const start = context.currentTime + 0.008;
+      for (const [frequency, delay, length, strength] of scores[cue]) {
+        const oscillator = context.createOscillator();
+        const envelope = context.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, start + delay);
+        envelope.gain.setValueAtTime(0.0001, start + delay);
+        envelope.gain.exponentialRampToValueAtTime(
+          Math.max(0.0002, Math.min(1, volume) * 0.22 * strength),
+          start + delay + 0.012,
+        );
+        envelope.gain.exponentialRampToValueAtTime(0.0001, start + delay + length);
+        oscillator.connect(envelope).connect(context.destination);
+        oscillator.start(start + delay);
+        oscillator.stop(start + delay + length + 0.02);
+        const shimmer = context.createOscillator();
+        const shimmerGain = context.createGain();
+        shimmer.type = 'triangle';
+        shimmer.frequency.setValueAtTime(frequency * 2.01, start + delay);
+        shimmerGain.gain.setValueAtTime(0.0001, start + delay);
+        shimmerGain.gain.exponentialRampToValueAtTime(
+          Math.max(0.0002, Math.min(1, volume) * 0.032 * strength),
+          start + delay + 0.014,
+        );
+        shimmerGain.gain.exponentialRampToValueAtTime(0.0001, start + delay + length * 0.72);
+        shimmer.connect(shimmerGain).connect(context.destination);
+        shimmer.start(start + delay);
+        shimmer.stop(start + delay + length * 0.72 + 0.02);
+        oscillator.onended = () => {
+          oscillator.disconnect();
+          envelope.disconnect();
+        };
+        shimmer.onended = () => {
+          shimmer.disconnect();
+          shimmerGain.disconnect();
+        };
+      }
     };
-    if (context.state === 'suspended') void context.resume().then(schedule).catch(() => undefined);
+    if (context.state === 'suspended')
+      void context
+        .resume()
+        .then(schedule)
+        .catch(() => undefined);
     else schedule();
   } catch {
     // Audio is optional on devices that restrict Web Audio.

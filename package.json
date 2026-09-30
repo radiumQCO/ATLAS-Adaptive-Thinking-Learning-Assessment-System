@@ -14,7 +14,7 @@
     "build": "tsc -b && vite build --configLoader runner",
     "preview": "vite preview --configLoader runner --host 127.0.0.1 --port 1420 --strictPort",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build",
+    "desktop:build": "tauri build && node scripts/copy-root-exe.mjs",
     "test": "vitest run tests/logic.test.ts --configLoader runner",
     "test:e2e": "playwright test",
     "format": "prettier --write src tests scripts *.json *.ts *.html *.md"

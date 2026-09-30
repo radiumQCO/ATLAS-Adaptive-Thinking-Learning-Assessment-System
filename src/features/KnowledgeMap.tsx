@@ -139,6 +139,61 @@ export function KnowledgeMap() {
         ctx.stroke();
       }
     }
+    const nodesByTopic = new Map(doc.nodes.map((node) => [node.topicId, node]));
+    const visibleTopics = new Set(visible.map((node) => node.topicId));
+    for (const child of doc.nodes) {
+      const parentId = topics.get(child.topicId)?.parentId;
+      if (!parentId || (!visibleTopics.has(child.topicId) && !visibleTopics.has(parentId)))
+        continue;
+      const parent = nodesByTopic.get(parentId);
+      if (!parent) continue;
+      const dx = child.x - parent.x;
+      const dy = child.y - parent.y;
+      if (!dx && !dy) continue;
+      const horizontal = Math.abs(dx) >= Math.abs(dy);
+      const direction = Math.sign(horizontal ? dx : dy);
+      const parentX = (parent.x + 0.5) * CELL;
+      const parentY = (parent.y + 0.5) * CELL;
+      const childX = (child.x + 0.5) * CELL;
+      const childY = (child.y + 0.5) * CELL;
+      const start = horizontal
+        ? { x: parentX + direction * 26, y: parentY + 11 }
+        : { x: parentX, y: parentY + direction * (CELL / 2 - 12) };
+      const end = horizontal
+        ? { x: childX - direction * 26, y: childY + 11 }
+        : { x: childX, y: childY - direction * (CELL / 2 - 12) };
+      const middle = horizontal ? (start.x + end.x) / 2 : (start.y + end.y) / 2;
+      const beforeEnd = horizontal ? { x: middle, y: end.y } : { x: end.x, y: middle };
+      // Little right-angle paths follow the notebook grid, always pointing to the child.
+      ctx.save();
+      ctx.strokeStyle = dark ? '#e88a63c7' : '#b5522bc4';
+      ctx.fillStyle = dark ? '#e88a63' : '#b5522b';
+      ctx.lineWidth = 1.4;
+      ctx.lineJoin = 'round';
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      if (horizontal) {
+        ctx.lineTo(middle, start.y);
+        ctx.lineTo(middle, end.y);
+      } else {
+        ctx.lineTo(start.x, middle);
+        ctx.lineTo(end.x, middle);
+      }
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const length = Math.hypot(end.x - beforeEnd.x, end.y - beforeEnd.y);
+      const ux = length ? (end.x - beforeEnd.x) / length : horizontal ? direction : 0;
+      const uy = length ? (end.y - beforeEnd.y) / length : horizontal ? 0 : direction;
+      ctx.beginPath();
+      ctx.moveTo(end.x, end.y);
+      ctx.lineTo(end.x - ux * 7 - uy * 3.5, end.y - uy * 7 + ux * 3.5);
+      ctx.lineTo(end.x - ux * 7 + uy * 3.5, end.y - uy * 7 - ux * 3.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
     const firstByCountry = new Map<string, MapNode>();
     for (const node of doc.nodes) {
       if (!node.countryId) continue;
@@ -658,7 +713,9 @@ export function KnowledgeMap() {
       </div>
       <div className="map-bottom-note">
         <span>Drag to explore · scroll to zoom · double-click to open</span>
-        <span>Touching cells share a territory. Questions connect everything.</span>
+        <span>
+          Touching cells share a territory. Fine arrows point from a topic to its subtopic.
+        </span>
       </div>
       <details className="map-accessible-list">
         <summary>Map index · keyboard navigation</summary>

@@ -153,13 +153,14 @@ export function App() {
     void import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
       const win = getCurrentWindow();
       unlisten = await win.onCloseRequested(async (event) => {
-        if (closing) return;
         event.preventDefault();
+        if (closing) return;
+        closing = true;
         try {
           await flush();
-          closing = true;
-          await win.close();
+          await win.destroy();
         } catch {
+          closing = false;
           retrySave();
           window.alert(
             'ATLAS could not save your latest changes. Please keep the app open, check Settings, and retry saving.',

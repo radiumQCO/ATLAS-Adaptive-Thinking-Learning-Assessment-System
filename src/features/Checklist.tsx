@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Plus, Search, Trash2 } from 'lucide-react';
+import { useMemo, useState, type CSSProperties } from 'react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus, Search, Trash2 } from 'lucide-react';
 import {
   addTopic,
   deleteTopic,
@@ -9,7 +9,7 @@ import {
   setSearch,
   useAtlas,
 } from '../app/store';
-import { masteryNames, uid } from '../lib/model';
+import { masteryNames, uid, type Topic } from '../lib/model';
 import {
   Button,
   Empty,
@@ -107,35 +107,103 @@ export function Checklist() {
   const [subject, setSubject] = useState('all'),
     [mastery, setFilter] = useState('all'),
     [sort, setSort] = useState('manual'),
-    [page, setPage] = useState(0);
-  const topics = useMemo(
-    () =>
-      data!.topics
-        .filter(
-          (t) =>
-            (subject === 'all' || t.subjectId === subject) &&
-            (mastery === 'all' || t.mastery === +mastery) &&
-            t.name.toLowerCase().includes(search.toLowerCase()),
-        )
-        .sort((a, b) =>
-          sort === 'name'
-            ? a.name.localeCompare(b.name)
-            : sort === 'mastery'
-              ? a.mastery - b.mastery || a.order - b.order
-              : sort === 'newest'
-                ? b.createdAt - a.createdAt
-                : a.order - b.order,
-        ),
-    [data, search, subject, mastery, sort],
-  );
+    [page, setPage] = useState(0),
+    [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const filtering = !!search.trim() || subject !== 'all' || mastery !== 'all';
+  const tree = useMemo(() => {
+    const all = data!.topics;
+    const byId = new Map(all.map((topic) => [topic.id, topic]));
+    const query = search.trim().toLowerCase();
+    const matches = all.filter(
+      (topic) =>
+        (subject === 'all' || topic.subjectId === subject) &&
+        (mastery === 'all' || topic.mastery === +mastery) &&
+        topic.name.toLowerCase().includes(query),
+    );
+    const matchedIds = new Set(matches.map((topic) => topic.id));
+    const visibleIds = new Set(matchedIds);
+    // If a search finds a deep subtopic, show its parents so the result makes sense.
+    for (const topic of matches) {
+      const seen = new Set([topic.id]);
+      let parentId = topic.parentId;
+      while (parentId && !seen.has(parentId)) {
+        seen.add(parentId);
+        visibleIds.add(parentId);
+        parentId = byId.get(parentId)?.parentId ?? null;
+      }
+    }
+    const compare = (a: Topic, b: Topic) =>
+      sort === 'name'
+        ? a.name.localeCompare(b.name) || a.order - b.order
+        : sort === 'mastery'
+          ? a.mastery - b.mastery || a.order - b.order
+          : sort === 'newest'
+            ? b.createdAt - a.createdAt || a.order - b.order
+            : a.order - b.order;
+    const children = new Map<string | null, Topic[]>();
+    const allSiblings = new Map<string | null, Topic[]>();
+    for (const topic of all) {
+      const siblings = allSiblings.get(topic.parentId) ?? [];
+      siblings.push(topic);
+      allSiblings.set(topic.parentId, siblings);
+      if (!visibleIds.has(topic.id)) continue;
+      const parent = topic.parentId && visibleIds.has(topic.parentId) ? topic.parentId : null;
+      const group = children.get(parent) ?? [];
+      group.push(topic);
+      children.set(parent, group);
+    }
+    const neighbors = new Map<string, { previous: string | null; next: string | null }>();
+    for (const siblings of allSiblings.values()) {
+      siblings.sort((a, b) => a.order - b.order);
+      siblings.forEach((topic, index) =>
+        neighbors.set(topic.id, {
+          previous: siblings[index - 1]?.id ?? null,
+          next: siblings[index + 1]?.id ?? null,
+        }),
+      );
+    }
+    for (const group of children.values()) group.sort(compare);
+    const rows: {
+      topic: Topic;
+      depth: number;
+      context: boolean;
+      childCount: number;
+      previous: string | null;
+      next: string | null;
+    }[] = [];
+    const visited = new Set<string>();
+    function visit(topic: Topic, depth: number) {
+      if (visited.has(topic.id)) return;
+      visited.add(topic.id);
+      const descendants = children.get(topic.id) ?? [];
+      const pair = neighbors.get(topic.id);
+      rows.push({
+        topic,
+        depth,
+        context: !matchedIds.has(topic.id),
+        childCount: descendants.length,
+        previous: pair?.previous ?? null,
+        next: pair?.next ?? null,
+      });
+      if (filtering || !collapsed.has(topic.id))
+        for (const child of descendants) visit(child, depth + 1);
+    }
+    for (const root of children.get(null) ?? []) visit(root, 0);
+    return {
+      rows,
+      matchCount: matches.length,
+      contextCount: rows.filter((row) => row.context).length,
+    };
+  }, [data, search, subject, mastery, sort, collapsed, filtering]);
+  const topics = tree.rows;
   const offset = Math.min(page, Math.max(0, Math.ceil(topics.length / 60) - 1)) * 60;
   function reorder(id: string, dir: number) {
-    const index = topics.findIndex((t) => t.id === id),
-      other = topics[index + dir];
-    if (!other) return;
+    const row = topics.find((entry) => entry.topic.id === id);
+    const otherId = dir < 0 ? row?.previous : row?.next;
+    if (!otherId) return;
     mutate((d) => {
       const a = d.topics.find((t) => t.id === id)!,
-        b = d.topics.find((t) => t.id === other.id)!;
+        b = d.topics.find((t) => t.id === otherId)!;
       [a.order, b.order] = [b.order, a.order];
     });
   }
@@ -204,45 +272,84 @@ export function Checklist() {
       </div>
       <div className="paper-list">
         <div className="list-caption">
-          <span>{topics.length} TOPICS</span>
+          <span>
+            {tree.matchCount} TOPICS
+            {tree.contextCount ? ' · PARENTS SHOWN FOR CONTEXT' : ''}
+          </span>
           <span>SUBJECT</span>
         </div>
         {topics.length ? (
-          topics.slice(offset, offset + 60).map((t, i) => (
-            <TopicRow
-              key={t.id}
-              topic={t}
-              extra={
-                <div className="reorder">
-                  {sort === 'manual' && (
-                    <>
-                      <IconButton
-                        label={`Move ${t.name} up`}
-                        disabled={offset + i === 0}
-                        onClick={() => reorder(t.id, -1)}
-                      >
-                        <ArrowUp size={13} />
-                      </IconButton>
-                      <IconButton
-                        label={`Move ${t.name} down`}
-                        disabled={offset + i === topics.length - 1}
-                        onClick={() => reorder(t.id, 1)}
-                      >
-                        <ArrowDown size={13} />
-                      </IconButton>
-                    </>
-                  )}
+          topics
+            .slice(offset, offset + 60)
+            .map(({ topic: t, depth, context, childCount, previous, next }) => (
+              <div
+                className={
+                  'topic-tree-entry' + (depth ? ' nested' : '') + (context ? ' context' : '')
+                }
+                key={t.id}
+                style={{ '--tree-indent': String(Math.min(depth, 8) * 22) + 'px' } as CSSProperties}
+              >
+                {childCount ? (
                   <IconButton
-                    label={`Delete ${t.name}`}
-                    disabled={data!.timer?.topicId === t.id || data!.timer?.subtopicId === t.id}
-                    onClick={() => deleteTopic(t.id)}
+                    label={
+                      (collapsed.has(t.id) && !filtering ? 'Expand ' : 'Collapse ') +
+                      t.name +
+                      ' subtopics'
+                    }
+                    disabled={filtering}
+                    onClick={() => {
+                      setCollapsed((current) => {
+                        const next = new Set(current);
+                        if (next.has(t.id)) next.delete(t.id);
+                        else next.add(t.id);
+                        return next;
+                      });
+                    }}
                   >
-                    <Trash2 size={13} />
+                    {collapsed.has(t.id) && !filtering ? (
+                      <ChevronRight size={14} />
+                    ) : (
+                      <ChevronDown size={14} />
+                    )}
                   </IconButton>
-                </div>
-              }
-            />
-          ))
+                ) : (
+                  <span className="topic-tree-spacer" aria-hidden="true" />
+                )}
+                <TopicRow
+                  topic={t}
+                  depth={depth}
+                  extra={
+                    <div className="reorder">
+                      {sort === 'manual' && (
+                        <>
+                          <IconButton
+                            label={'Move ' + t.name + ' up'}
+                            disabled={!previous}
+                            onClick={() => reorder(t.id, -1)}
+                          >
+                            <ArrowUp size={13} />
+                          </IconButton>
+                          <IconButton
+                            label={'Move ' + t.name + ' down'}
+                            disabled={!next}
+                            onClick={() => reorder(t.id, 1)}
+                          >
+                            <ArrowDown size={13} />
+                          </IconButton>
+                        </>
+                      )}
+                      <IconButton
+                        label={'Delete ' + t.name}
+                        disabled={data!.timer?.topicId === t.id || data!.timer?.subtopicId === t.id}
+                        onClick={() => deleteTopic(t.id)}
+                      >
+                        <Trash2 size={13} />
+                      </IconButton>
+                    </div>
+                  }
+                />
+              </div>
+            ))
         ) : (
           <Empty
             title={data!.topics.length ? 'No matching ideas' : 'Your first blank page'}

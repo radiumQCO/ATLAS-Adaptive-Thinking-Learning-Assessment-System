@@ -289,8 +289,7 @@ kbd {
   gap: 20px;
   padding: 0 42px;
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--paper) 93%, transparent);
-  backdrop-filter: blur(12px);
+  background: var(--paper);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -354,7 +353,7 @@ kbd {
 }
 .main-content {
   min-height: calc(100vh - 74px);
-  animation: page-in 0.28s ease both;
+  animation: page-in 0.12s ease-out both;
 }
 .page {
   max-width: 1300px;
@@ -665,6 +664,39 @@ textarea {
   border-bottom: 1px solid var(--line-soft);
   padding: 6px 10px;
   transition: background 0.18s;
+  flex: 1;
+  min-width: 0;
+}
+.topic-tree-entry {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  padding-left: var(--tree-indent);
+}
+.topic-tree-entry.nested::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--tree-indent) - 14px);
+  top: 0;
+  width: 14px;
+  height: 50%;
+  border-left: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  pointer-events: none;
+}
+.topic-tree-entry > .icon-btn,
+.topic-tree-spacer {
+  align-self: center;
+  flex: none;
+  width: 25px;
+  height: 28px;
+  margin-left: 3px;
+}
+.topic-tree-entry.context .topic-name {
+  opacity: 0.67;
+}
+.topic-tree-entry.nested .topic-name {
+  font-weight: 500;
 }
 .topic-row:hover {
   background: color-mix(in srgb, var(--paper-solid) 70%, transparent);
@@ -678,6 +710,17 @@ textarea {
   font-weight: 600;
   flex: 1;
   min-width: 0;
+}
+.topic-name span,
+.topic-name small {
+  display: block;
+}
+.topic-name small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
 }
 .topic-name:hover {
   color: var(--orange);
@@ -1064,7 +1107,6 @@ textarea {
 }
 .modal::backdrop {
   background: #1c1d19aa;
-  backdrop-filter: blur(3px);
 }
 .modal.wide {
   width: min(820px, calc(100vw - 30px));
@@ -1368,7 +1410,7 @@ textarea {
   font-weight: 500;
 }
 .study-pickers select:disabled {
-  opacity: .62;
+  opacity: 0.62;
   cursor: default;
 }
 .focus-topic {
@@ -1414,7 +1456,9 @@ textarea {
   fill: var(--orange);
   transform-box: fill-box;
   transform-origin: center;
-  transition: cx .5s linear, cy .5s linear;
+  transition:
+    cx 0.5s linear,
+    cy 0.5s linear;
 }
 .sound-controls {
   display: flex;
@@ -1453,7 +1497,9 @@ textarea {
   text-align: center;
 }
 .focus-complete-content h3 {
-  font: 25px Lora, serif;
+  font:
+    25px Lora,
+    serif;
   margin: 14px 0 6px;
 }
 .focus-complete-content p {
@@ -2288,7 +2334,6 @@ textarea {
   position: fixed;
   inset: 0;
   background: #1c1d19aa;
-  backdrop-filter: blur(3px);
   z-index: 90;
   display: flex;
   justify-content: center;
@@ -2371,11 +2416,9 @@ textarea {
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 @keyframes dialog-in {
@@ -2612,10 +2655,22 @@ textarea {
   color: var(--ink);
   text-align: left;
 }
-.civ-gap:hover { color: var(--orange); }
-.civ-gap span { font-size: 12px; font-weight: 600; }
-.civ-gap small { grid-row: 2; color: var(--muted); font-size: 10px; }
-.civ-gap svg { grid-column: 2; grid-row: 1 / span 2; }
+.civ-gap:hover {
+  color: var(--orange);
+}
+.civ-gap span {
+  font-size: 12px;
+  font-weight: 600;
+}
+.civ-gap small {
+  grid-row: 2;
+  color: var(--muted);
+  font-size: 10px;
+}
+.civ-gap svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
 .civ-editorial-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.85fr);
@@ -3027,8 +3082,12 @@ textarea {
   }
 }
 @media (max-width: 900px) {
-  .study-layout { grid-template-columns: 1fr; }
-  .civ-growth { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .study-layout {
+    grid-template-columns: 1fr;
+  }
+  .civ-growth {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .civ-editorial-grid {
     grid-template-columns: 1fr;
   }
@@ -3037,9 +3096,15 @@ textarea {
   }
 }
 @media (max-width: 720px) {
-  .study-pickers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .study-pickers .field:last-child { grid-column: 1 / -1; }
-  .civ-growth { grid-template-columns: 1fr 1fr; }
+  .study-pickers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .study-pickers .field:last-child {
+    grid-column: 1 / -1;
+  }
+  .civ-growth {
+    grid-template-columns: 1fr 1fr;
+  }
   .civ-hero {
     grid-template-columns: 1fr;
   }

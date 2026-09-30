@@ -1,12 +1,13 @@
+import { useMemo } from 'react';
 import { ArrowRight, ArrowUpRight, Plus, Sparkles } from 'lucide-react';
 import { navigate, setAdding, useAtlas } from '../app/store';
 import { dayKey, dateLabel, duration, getStats, shiftDay, nextTestDay } from '../lib/time';
 import { Button, Empty, MasterySquare, SectionTitle, TopicRow } from '../components/ui';
 export function Home() {
   const { data } = useAtlas(),
-    d = data!,
-    stats = getStats(d.sessions),
-    queue = d.topics.filter((t) => t.mastery === 2),
+    d = data!;
+  const stats = useMemo(() => getStats(d.sessions), [d.sessions]);
+  const queue = d.topics.filter((t) => t.mastery === 2),
     passed = d.topics.filter((t) => t.mastery === 3).length;
   const recent = [...d.topics].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
   const days = Array.from({ length: 7 }, (_, i) => shiftDay(dayKey(), i - 6)),
