@@ -145,17 +145,30 @@ export async function readBackup(id: string): Promise<Envelope> {
 export async function exportFile(snapshot: Snapshot) {
   const body = JSON.stringify(await envelope(snapshot), null, 2);
   const filename = `ATLAS-${new Date().toISOString().slice(0, 10)}.json`;
+  return saveExport(body, filename, 'ATLAS backup', 'json', 'application/json');
+}
+export async function exportTextFile(body: string, filename: string) {
+  // The UTF-8 marker keeps Russian notes readable in Windows text editors too.
+  return saveExport(`\uFEFF${body}`, filename, 'Text document', 'txt', 'text/plain;charset=utf-8');
+}
+async function saveExport(
+  body: string,
+  filename: string,
+  label: string,
+  extension: string,
+  mime: string,
+) {
   if (native) {
     const { save } = await import('@tauri-apps/plugin-dialog');
     const path = await save({
       defaultPath: filename,
-      filters: [{ name: 'ATLAS backup', extensions: ['json'] }],
+      filters: [{ name: label, extensions: [extension] }],
     });
     if (!path) return false;
     const { writeTextFile } = await import('@tauri-apps/plugin-fs');
     await writeTextFile(path, body);
   } else {
-    const url = URL.createObjectURL(new Blob([body], { type: 'application/json' }));
+    const url = URL.createObjectURL(new Blob([body], { type: mime }));
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;

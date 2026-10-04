@@ -18,7 +18,7 @@ It's a Windows desktop app, and it works offline. Your notebook stays on your co
 - **Build a real knowledge map.** Put topics into colored territories, connect ideas, move around the canvas, and zoom in or out.
 - **Study with a countdown.** Pick a topic and a duration. The ring and marker move with your progress, and ATLAS plays a sound and shows a message when time is up.
 - **Keep a useful checklist.** Add topics and subtopics, move them around, mark what you understand, and delete a topic straight from its row.
-- **Test your memory.** Weekly reviews feed your learning history instead of just counting how many boxes you clicked.
+- **Test your memory.** Weekly reviews feed your learning history instead of just counting how many boxes you clicked. In **Weekly test → Saved tests**, pick any past test day and export your recall answers as a `.txt` file to get feedback from an AI. The export contains your test responses, not your Checklist explanations.
 - **Explore Civilization if you want.** Each territory on the Knowledge Map becomes its own civilization. Its size comes from placed map cells; its level comes from understanding, passed reviews, depth, capabilities, and projects made possible by your knowledge. It never blocks the rest of the notebook.
 - **Keep control of your data.** Changes save locally. Backups are optional, limited to the newest 12, and created at most once every six hours after changes. You can export a JSON copy to another drive.
 

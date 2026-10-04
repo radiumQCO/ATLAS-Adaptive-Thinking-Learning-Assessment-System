@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createDemo } from '../src/lib/demo';
 import { placement, canParent } from '../src/lib/map';
 import { emptySnapshot, validateSnapshot } from '../src/lib/model';
+import { createTestExport, testDays } from '../src/lib/test-export';
 import {
   capabilityState,
   defaultCivilization,
@@ -202,5 +203,80 @@ describe('backup format', () => {
     expect((await decodeBackup(JSON.stringify(backup))).snapshot.topics.length).toBeGreaterThan(0);
     const tampered = { ...backup, snapshot: { ...backup.snapshot, topics: [] } };
     await expect(decodeBackup(JSON.stringify(tampered))).rejects.toThrow(/checksum/i);
+  });
+});
+
+describe('weekly test text export', () => {
+  function history() {
+    const data = createDemo();
+    const topic = data.topics[0];
+    topic.name = 'Квантовые вычисления';
+    topic.explanation = 'CHECKLIST REFERENCE — do not export this explanation';
+    const old = new Date(2026, 8, 20, 18).getTime();
+    const latest = new Date(2026, 9, 4, 18).getTime();
+    data.tests = [
+      {
+        id: 'latest-empty',
+        topicId: topic.id,
+        date: latest + 60_000,
+        result: 'pass',
+        response: '',
+        demo: false,
+      },
+      {
+        id: 'old',
+        topicId: topic.id,
+        date: old,
+        result: 'pass',
+        response: '  Мой ответ две недели назад.\n|0⟩ + |1⟩  ',
+        demo: false,
+      },
+      {
+        id: 'latest',
+        topicId: topic.id,
+        date: latest,
+        result: 'review',
+        response: 'Today I forgot a step.\nψ = α|0⟩ + β|1⟩',
+        demo: false,
+      },
+    ];
+    return data;
+  }
+  it('exports an older test verbatim without current checklist explanations or newer answers', () => {
+    const data = history();
+    const before = structuredClone(data);
+    const file = createTestExport(data, '2026-09-20');
+    expect(file.filename).toBe('ATLAS-weekly-test-2026-09-20.txt');
+    expect(file.body).toContain('Topic: Квантовые вычисления');
+    expect(file.body).toContain(data.tests[1].response);
+    expect(file.body).toContain('Sunday, September 20, 2026');
+    expect(file.body).not.toContain('CHECKLIST REFERENCE');
+    expect(file.body).not.toContain('Today I forgot');
+    expect(data).toEqual(before);
+  });
+  it('offers latest first and includes all same-day attempts, review results and blank notes', () => {
+    const data = history();
+    expect(testDays(data.tests).map((entry) => entry.day)).toEqual(['2026-10-04', '2026-09-20']);
+    const file = createTestExport(data, '2026-10-04');
+    expect(file.body).toContain('Saved answers: 2');
+    expect(file.body).toContain(data.tests[2].response);
+    expect(file.body).toContain('Self-assessment: Needs review');
+    expect(file.body).toContain('Self-assessment: Passed');
+    expect(file.body).toContain('[No recall notes were written for this test.]');
+    expect(file.body.indexOf('Today I forgot')).toBeLessThan(file.body.indexOf('[No recall notes'));
+    expect(file.body).not.toContain('Мой ответ две недели назад');
+    expect(file.body).not.toContain('CHECKLIST REFERENCE');
+  });
+  it('groups by the local test day around midnight', () => {
+    const data = history();
+    data.tests[0].date = new Date(2026, 9, 4, 23, 59).getTime();
+    data.tests[1].date = new Date(2026, 9, 5, 0, 1).getTime();
+    data.tests = data.tests.slice(0, 2);
+    expect(testDays(data.tests).map((entry) => entry.day)).toEqual(['2026-10-05', '2026-10-04']);
+    expect(createTestExport(data, '2026-10-04').body).not.toContain(data.tests[1].response);
+  });
+  it('handles an empty history and refuses a date without any saved tests', () => {
+    expect(testDays([])).toEqual([]);
+    expect(() => createTestExport(history(), '2026-09-27')).toThrow(/no saved tests/i);
   });
 });

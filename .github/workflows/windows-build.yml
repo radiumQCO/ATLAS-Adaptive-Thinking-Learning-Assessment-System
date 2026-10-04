@@ -1,0 +1,40 @@
+name: Windows desktop build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'scripts/**'
+      - 'package*.json'
+      - 'vite.config.ts'
+      - 'tsconfig.json'
+      - '.github/workflows/windows-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npm test
+      - run: npm run desktop:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ATLAS-Windows-${{ github.sha }}
+          path: |
+            ATLAS.exe
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+          retention-days: 7
